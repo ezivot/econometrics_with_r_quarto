@@ -6,58 +6,63 @@ The R packages used in the chapter are **HansenData**. Make sure these packages 
 
 ```{r}
 #| include: false
-library(HansenData)
 options(digits=3)
 ```
 
-## Read and Prepare Data
+## Load and Prepare Data
 
-The examples in Hansen Chapter 2 are based on a sub-set of the March, 2009 CPS data available in the package **HansenData**.
+The examples in Hansen Chapter 2 are based on a sub-set of the March, 2009 CPS data available in the package **HansenData** as the tibble `cps09mar`:
 
 ```{r}
+library(HansenData)
 head(cps09mar)
 ```
 
-For the analysis of the wage data, I create the experience, wage and log wage data
+In Section 2.2, Bruce considers the distribution of the random variable *wage*
+$$
+F(y) = \Pr[wage \le y]
+$$
+where *wage* is defines as weekly earnings. I create the wage and log wage data using:
 ```{r}
-cps09mar$experience = cps09mar$age - cps09mar$education - 6
+# cps09mar$experience = cps09mar$age - cps09mar$education - 6
 cps09mar$wage = cps09mar$earnings/(cps09mar$hours*cps09mar$week)
 cps09mar$lwage = log(cps09mar$wage)
 attach(cps09mar)
 ```
 
-
-## Basic Summary Statistics
-
-```{r}
-summary(cps09mar)
-```
+Attaching a data frame (or tibble) using `attach()` allows the variables in the data frame to be referenced by name (e.g., use `wage` instead of by `cps09mar$wage`). This will be convenient in the following analysis. 
 
 ## Distribution of Hourly Wages
 
+Summary statistics for `wage` and `lwage` can be computed using the generic function `summary()`:
+
+```{r}
+summary(round(cbind(wage, lwage),digits=2))
+```
+The mean hourly wage is about \$24/hr and the interquartile range is [\$12.8, \$28.9]. For `wage` the median wage, \$19.2, is smaller than the mean wage suggesting a positive skewness in the distribution of wages. For `lwage` the mean and median are very close suggesting that the distribution is symmetric. 
+
+Kernel density estimates (smoothed histograms, see Hansen Chapter xx) of `wage` and `lwage` can be computed using the `density()` function:
+
+```{r}
+wage.density = density(wage, bw=5)
+lwage.density = density(lwage, bw=0.1)
+```
+
+The argument `bw` specifies the bandwidth of the kernel density estimate and controls the smoothness of the resulting estimate. The density estimates are show in the figures below, replicating Hansen Figure 2.1:
+
 ```{r}
 # kernel density estimate of pdf
-wage.density = density(wage, bw=5)
+
 par(mfrow=c(1,2))
-# empirical cdf
-plot.ecdf(wage, main="CDF of wage", xlab="Dollars per Hour", 
-            lwd=2, col="blue")
-# estimate of pdf
-plot(wage.density, main="pdf of wage", xlim=c(0, 100), xlab="Dollars per Hour",
+plot(wage.density, main="", xlim=c(0, 70), xlab="(a) Wage Density",
        lwd=2, col="blue")
+plot(lwage.density, main="", xlab="(b) Log Wage Density", 
+     lwd=2, xlim = c(0, 6), col="blue")
 ```
 
 ```{r}
 #| echo: false
 par(mfrow=c(1,1))
-```
-
-## Distribution of Hourly Log Wages
-
-```{r}
-lwage.density = density(lwage, bw=0.1)
-plot(lwage.density, main="pdf of log(wage)", xlab="Log Dollars per Hour", 
-     lwd=2, xlim = c(1, 6), col="blue")
 ```
 
 ## Mean and Median Wages
