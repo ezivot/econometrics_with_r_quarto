@@ -1,0 +1,166 @@
+# Conditional Expectation and Projection {#sec-Conditional-Expectation-Projection}
+
+In this chapter I replicate the examples from Hansen's Chapter 2: Conditional Expectation and Projection. 
+
+The R packages used in the chapter are **HansenData**. Make sure these packages are installed an loaded prior to running the code in this chapter.
+
+```{r}
+#| include: false
+library(HansenData)
+options(digits=3)
+```
+
+## Read and Prepare Data
+
+The examples in Hansen Chapter 2 are based on a sub-set of the March, 2009 CPS data available in the package **HansenData**.
+
+```{r}
+head(cps09mar)
+```
+
+For the analysis of the wage data, I create the experience, wage and log wage data
+```{r}
+cps09mar$experience = cps09mar$age - cps09mar$education - 6
+cps09mar$wage = cps09mar$earnings/(cps09mar$hours*cps09mar$week)
+cps09mar$lwage = log(cps09mar$wage)
+attach(cps09mar)
+```
+
+
+## Basic Summary Statistics
+
+```{r}
+summary(cps09mar)
+```
+
+## Distribution of Hourly Wages
+
+```{r}
+# kernel density estimate of pdf
+wage.density = density(wage, bw=5)
+par(mfrow=c(1,2))
+# empirical cdf
+plot.ecdf(wage, main="CDF of wage", xlab="Dollars per Hour", 
+            lwd=2, col="blue")
+# estimate of pdf
+plot(wage.density, main="pdf of wage", xlim=c(0, 100), xlab="Dollars per Hour",
+       lwd=2, col="blue")
+```
+
+```{r}
+#| echo: false
+par(mfrow=c(1,1))
+```
+
+## Distribution of Hourly Log Wages
+
+```{r}
+lwage.density = density(lwage, bw=0.1)
+plot(lwage.density, main="pdf of log(wage)", xlab="Log Dollars per Hour", 
+     lwd=2, xlim = c(1, 6), col="blue")
+```
+
+## Mean and Median Wages
+
+```{r}
+mean(wage)
+median(wage)
+```
+
+```{r}
+plot(wage.density, main="pdf of wage", xlim=c(0, 100), xlab="Dollars per Hour",
+       lwd=2, col="blue")
+abline(v=mean(wage), col="blue", lwd=2)
+abline(v=median(wage), col="red", lwd=2)
+legend("topright", legend=c("Mean", "Median"), lty=1, lwd=2, col=c("blue", "red"))
+```
+
+## Mean and Median Log Wages
+
+```{r}
+mean(lwage)
+median(lwage)
+```
+
+```{r}
+plot(lwage.density, main="pdf of log wage", xlim=c(1, 6), xlab="Log Dollars per Hour",
+       lwd=2, col="blue")
+abline(v=mean(lwage), col="blue", lwd=2)
+abline(v=median(lwage), col="red", lwd=2)
+legend("topright", legend=c("Mean", "Median"), lty=1, lwd=2, col=c("blue", "red"))
+```
+
+## Conditional Distributions for Men and Women
+
+```{r}
+lwageWomen.density = density(lwage[female==1], bw=0.1)
+lwageMen.density = density(lwage[female==0], bw=0.1)
+plot(lwageWomen.density, main="pdf of log(wage) for Men and Women", 
+     xlab="Log Dollars per Hour", lwd=2, xlim = c(1, 6))
+points(lwageMen.density, type="l", col="blue", lwd=2)
+legend("topright", legend=c("Women", "Men"), lty="solid", lwd=2, col=c("black", "blue"))
+```
+
+```{r}
+# mean log wages for men and women
+mean(lwage[female==0])
+mean(lwage[female==1])
+# difference
+mean(lwage[female==0]) - mean(lwage[female==1])
+
+```
+
+## Conditional Distributions for Men and Women by race
+
+```{r}
+# race = 1 = white, race = 2 = black
+lwageWhiteWomen.density = density(lwage[female==1 & race==1], bw=0.1)
+lwageWhiteMen.density = density(lwage[female==0 & race==1], bw=0.1)
+lwageBlackWomen.density = density(lwage[female==1 & race==2], bw=0.1)
+lwageBlackMen.density = density(lwage[female==0 & race==2], bw=0.1)
+plot(lwageWhiteWomen.density, main="pdf of log(wage) for Men and Women by race", 
+     xlab="Log Dollars per Hour", lwd=2, xlim = c(1, 6), ylim=c(0, 0.8))
+points(lwageWhiteMen.density, type="l", col="blue", lwd=2)
+points(lwageBlackWomen.density, type="l", col="green", lwd=2)
+points(lwageBlackMen.density, type="l", col="red", lwd=2)
+legend("topright", legend=c("White Women", "White Men", "Black Women", "Black Men"), 
+       lty="solid", lwd=2, col=c("black", "blue", "green", "red"))
+```
+
+## Conditional Means for Men and Women by race
+
+```{r}
+# White males
+mean(lwage[female==0 & race==1])
+# White females
+mean(lwage[female==1 & race==1])
+# Black males
+mean(lwage[female==0 & race==2])
+# Black females
+mean(lwage[female==1 & race==2])
+```
+
+## Conditional Mean Function
+
+Compute conditional means of log wages for men and women conditional on education level
+
+```{r}
+elevels = sort(unique(education))
+cmean.mat = matrix(0, length(elevels), 2)
+colnames(cmean.mat) = c("White.Male", "White.Female")
+rownames(cmean.mat) = as.character(elevels)
+
+for (i in 1:length(elevels)) {
+  cmean.mat[i, 1] = mean(lwage[female==0 & race==1 & education==elevels[i]])
+  cmean.mat[i, 2] = mean(lwage[female==1 & race==1 & education==elevels[i]])
+}
+```
+
+## Plot Conditional Mean Function
+
+```{r}
+plot(elevels, cmean.mat[, 1], type="b", pch=16, lwd=2, 
+     ylim=c(1.75,4), ylab="Log Dollars per Hour", xlab="Years of Education")
+points(elevels, cmean.mat[, 2], type="b", pch=16, lwd=2, col="blue")
+legend("topleft", legend=c("Men", "Women"), lty="solid", pch=16, lwd=2, col=c("black", "blue"))
+```

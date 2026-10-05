@@ -1,0 +1,38 @@
+project:
+  type: book
+
+book:
+  title: "Econometrics with R"
+  author: "Eric Zivot"
+  date: last-modified
+  chapters:
+    - index.qmd
+    - 01-conditionalExpectationAndProjection.qmd
+    - references.qmd
+
+bibliography: [book.bib, packages.bib]
+
+execute:
+  engine: knitr
+  message: false
+  warning: false
+  fig-show: hold
+
+knitr:
+  opts_chunk:
+    comment: "#>"
+    collapse: true
+
+format:
+  html:
+    theme: cosmo
+    page-navigation: true
+    code-fold: show
+  pdf:
+    documentclass: scrreprt
+    fontsize: 11pt
+    geometry: margin=1in
+    linestretch: 1.2
+
+editor: source
+

@@ -1,0 +1,6 @@
+# Preface {.unnumbered}
+
+This book is an R companion to the Princeton University Press book *Econometrics* 
+by Bruce Hansen.
+
+*Who is the book written for? What background is required?*
