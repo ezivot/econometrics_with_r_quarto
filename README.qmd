@@ -1,0 +1,25 @@
+---
+format:
+  gfm:
+    default-image-extension: ""
+---
+
+<!-- README.md is generated from README.qmd. Please edit that file -->
+
+```{r}
+#| include: false
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Econometrics with R
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+*Econometrics with R* is a companion book to Bruce Hansen's 2022 Princeton University Press
+Book *Econometrics*. 
+
+
