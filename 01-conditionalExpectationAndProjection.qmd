@@ -18,9 +18,9 @@ library(HansenData)
 head(cps09mar)
 ```
 
-In Section 2.2, Bruce considers the distribution of the random variable *wage*
+In Section 2.2, Bruce considers the marginal distributions of the random variables *wage* and *log wage*:
 $$
-F(y) = \Pr[wage \le y]
+F(y) = \Pr[wage \le y], ~ F(\ell) = \Pr[log(wage) \le \ell]
 $$
 where *wage* is defines as weekly earnings. I create the wage and log wage data using:
 ```{r}
@@ -34,14 +34,23 @@ Attaching a data frame (or tibble) using `attach()` allows the variables in the 
 
 ## Distribution of Hourly Wages
 
-Summary statistics for `wage` and `lwage` can be computed using the generic function `summary()`:
+The distribution of hourly wages can be visualized using a histogram. In R, histograms can be created using the `hist()` function:
 
 ```{r}
-summary(round(cbind(wage, lwage),digits=2))
+#| label: fig-Histogram-Wages
+#| echo: true
+#| fig-cap: Histograms of hourly wages and log wages.
+#| out-width: 80%
+#| fig-asp: 0.75
+#| fig-align: center
+par(mfrow=c(1,2))
+hist(wage, main="", freq=FALSE, col="cornflowerblue")
+hist(lwage, main="", freq=FALSE, col="cornflowerblue")
 ```
-The mean hourly wage is about \$24/hr and the interquartile range is [\$12.8, \$28.9]. For `wage` the median wage, \$19.2, is smaller than the mean wage suggesting a positive skewness in the distribution of wages. For `lwage` the mean and median are very close suggesting that the distribution is symmetric. 
 
-Kernel density estimates (smoothed histograms, see Hansen Chapter xx) of `wage` and `lwage` can be computed using the `density()` function:
+The histograms show that the distribution of hourly wages is heavily skewed to the right, while the distribution of log wages is more symmetric. 
+
+Kernel density estimates (i.e., smoothed histograms, see Hansen Chapter 19) of `wage` and `lwage` can be computed using the `density()` function:
 
 ```{r}
 wage.density = density(wage, bw=5)
@@ -51,8 +60,12 @@ lwage.density = density(lwage, bw=0.1)
 The argument `bw` specifies the bandwidth of the kernel density estimate and controls the smoothness of the resulting estimate. The density estimates are show in the figures below, replicating Hansen Figure 2.1:
 
 ```{r}
-# kernel density estimate of pdf
-
+#| label: fig-Smoothed-Histogram-Wages
+#| echo: true
+#| fig-cap: Density of Wages and Log Wages.
+#| out-width: 80%
+#| fig-asp: 0.75
+#| fig-align: center
 par(mfrow=c(1,2))
 plot(wage.density, main="", xlim=c(0, 70), xlab="(a) Wage Density",
        lwd=2, col="blue")
@@ -60,44 +73,53 @@ plot(lwage.density, main="", xlab="(b) Log Wage Density",
      lwd=2, xlim = c(0, 6), col="blue")
 ```
 
+
+### Summary statistics wages
+
+Summary statistics for `wage` and `lwage` can be computed using the generic function `summary()`:
+
 ```{r}
-#| echo: false
-par(mfrow=c(1,1))
+summary(round(cbind(wage, lwage),digits=2))
+```
+The mean hourly wage is about \$24/hr and the interquartile range is [\$12.8, \$28.9]. For `wage` the median wage, \$19.2, is smaller than the mean wage suggesting a positive skewness in the distribution of wages. For `lwage` the mean and median are very close suggesting that the distribution is symmetric. 
+
+The R functions `mean()` and `median()` can be used to compute the mean and median of a vector:
+
+```{r}
+ans = c(mean(wage), median(wage))
+names(ans) = c("mean", "median")
+ans
 ```
 
-## Mean and Median Wages
+A convenient function to compute a collection of the most common summary statistics is the `describe()` function from the **psych** package:
 
 ```{r}
-mean(wage)
-median(wage)
+library(psych)
+describe(cbind(wage, lwage))
 ```
 
+## Conditional Expectation
+
+In Section 2.3, Hansen considers the conditional distribution of log wages for men and women. To compute the conditional means of log wages for men and women, I use the `mean()` function with the logical conditions `female==0` for men and `female==1` for women: 
+
 ```{r}
-plot(wage.density, main="pdf of wage", xlim=c(0, 100), xlab="Dollars per Hour",
-       lwd=2, col="blue")
-abline(v=mean(wage), col="blue", lwd=2)
-abline(v=median(wage), col="red", lwd=2)
-legend("topright", legend=c("Mean", "Median"), lty=1, lwd=2, col=c("blue", "red"))
+# mean log wages for men and women
+mean_men = mean(lwage[female==0])
+mean_women = mean(lwage[female==1])
+mean_difference = mean(lwage[female==0]) - mean(lwage[female==1])
+ans = c(mean_men, mean_women, mean_difference)
+names(ans) = c("Men", "Women", "Diff")
+ans
 ```
-
-## Mean and Median Log Wages
-
-```{r}
-mean(lwage)
-median(lwage)
-```
+The distribution of log wages for men and women can be visualized using kernel density estimates:
 
 ```{r}
-plot(lwage.density, main="pdf of log wage", xlim=c(1, 6), xlab="Log Dollars per Hour",
-       lwd=2, col="blue")
-abline(v=mean(lwage), col="blue", lwd=2)
-abline(v=median(lwage), col="red", lwd=2)
-legend("topright", legend=c("Mean", "Median"), lty=1, lwd=2, col=c("blue", "red"))
-```
-
-## Conditional Distributions for Men and Women
-
-```{r}
+#| label: fig-Smoothed-Histogram-by-Gender
+#| echo: true
+#| fig-cap: Hansen Figure 2.2 panel (a)
+#| out-width: 80%
+#| fig-asp: 0.75
+#| fig-align: center
 lwageWomen.density = density(lwage[female==1], bw=0.1)
 lwageMen.density = density(lwage[female==0], bw=0.1)
 plot(lwageWomen.density, main="pdf of log(wage) for Men and Women", 
@@ -106,25 +128,36 @@ points(lwageMen.density, type="l", col="blue", lwd=2)
 legend("topright", legend=c("Women", "Men"), lty="solid", lwd=2, col=c("black", "blue"))
 ```
 
-```{r}
-# mean log wages for men and women
-mean(lwage[female==0])
-mean(lwage[female==1])
-# difference
-mean(lwage[female==0]) - mean(lwage[female==1])
+Here, you see that the distribution of log wages for men is shifted to the right relative to the distribution for women.
 
+### Conditional Distributions for Men and Women by race
+
+The means of log wages for men and women by race can be computed using the `mean()` function with appropriate logical conditions (`race==1` for White and `race==2` for Black):
+
+```{r}
+mean_white_male = mean(lwage[female==0 & race==1])
+mean_white_female = mean(lwage[female==1 & race==1])
+mean_black_male = mean(lwage[female==0 & race==2])
+mean_black_female = mean(lwage[female==1 & race==2])
+ans = rbind(c(mean_white_male, mean_white_female), c(mean_black_male, mean_black_female))
+dimnames(ans) = list(c("White", "Black"), c("Men", "Women"))
+ans
 ```
-
-## Conditional Distributions for Men and Women by race
+To compute the conditional densities by gender and race use:
 
 ```{r}
-# race = 1 = white, race = 2 = black
+#| label: fig-Smoothed-Histogram-by-Gender-Race
+#| echo: true
+#| fig-cap: Hansen Figure 2.2 panel (b)
+#| out-width: 80%
+#| fig-asp: 0.75
+#| fig-align: center
 lwageWhiteWomen.density = density(lwage[female==1 & race==1], bw=0.1)
 lwageWhiteMen.density = density(lwage[female==0 & race==1], bw=0.1)
 lwageBlackWomen.density = density(lwage[female==1 & race==2], bw=0.1)
 lwageBlackMen.density = density(lwage[female==0 & race==2], bw=0.1)
 plot(lwageWhiteWomen.density, main="pdf of log(wage) for Men and Women by race", 
-     xlab="Log Dollars per Hour", lwd=2, xlim = c(1, 6), ylim=c(0, 0.8))
+     xlab="Log Dollars per Hour", lwd=2, xlim = c(1, 5), ylim=c(0, 0.8))
 points(lwageWhiteMen.density, type="l", col="blue", lwd=2)
 points(lwageBlackWomen.density, type="l", col="green", lwd=2)
 points(lwageBlackMen.density, type="l", col="red", lwd=2)
@@ -132,22 +165,18 @@ legend("topright", legend=c("White Women", "White Men", "Black Women", "Black Me
        lty="solid", lwd=2, col=c("black", "blue", "green", "red"))
 ```
 
-## Conditional Means for Men and Women by race
+## Logs and Percentages
+
+TBD
 
 ```{r}
-# White males
-mean(lwage[female==0 & race==1])
-# White females
-mean(lwage[female==1 & race==1])
-# Black males
-mean(lwage[female==0 & race==2])
-# Black females
-mean(lwage[female==1 & race==2])
+
 ```
 
-## Conditional Mean Function
 
-Compute conditional means of log wages for men and women conditional on education level
+## Conditional Expectation Function
+
+Consider computing the conditional means of log wages for men and women conditional on all observed education levels:
 
 ```{r}
 elevels = sort(unique(education))
@@ -159,13 +188,31 @@ for (i in 1:length(elevels)) {
   cmean.mat[i, 1] = mean(lwage[female==0 & race==1 & education==elevels[i]])
   cmean.mat[i, 2] = mean(lwage[female==1 & race==1 & education==elevels[i]])
 }
+cmean.mat
 ```
-
-## Plot Conditional Mean Function
+These conditional means as a function of education level can be visualized using a line plot:
 
 ```{r}
-plot(elevels, cmean.mat[, 1], type="b", pch=16, lwd=2, 
+#| label: fig-Conditional-Mean-by-Education
+#| echo: true
+#| fig-cap: Hansen Figure 2.3
+#| out-width: 80%
+#| fig-asp: 0.75
+#| fig-align: center
+plot(elevels, cmean.mat[, 1], type="b", pch=16, lwd=2,
      ylim=c(1.75,4), ylab="Log Dollars per Hour", xlab="Years of Education")
 points(elevels, cmean.mat[, 2], type="b", pch=16, lwd=2, col="blue")
 legend("topleft", legend=c("Men", "Women"), lty="solid", pch=16, lwd=2, col=c("black", "blue"))
 ```
+
+## Continuous Variables
+
+TBD
+
+## CEF Error
+
+TBD
+
+## Illustrations of Best Linear Predictor
+
+TBD
