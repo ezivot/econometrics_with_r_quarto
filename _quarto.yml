@@ -8,6 +8,7 @@ book:
   chapters:
     - index.qmd
     - 01-conditionalExpectationAndProjection.qmd
+    - 02-algebraLeastSquares.qmd
     - references.qmd
 
 bibliography: [book.bib, packages.bib]

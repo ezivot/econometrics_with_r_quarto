@@ -1,0 +1,383 @@
+# Algebra of Least Squares {#sec-Algebra-Least-Squares}
+
+In this chapter I replicate the examples from Hansen chapter 3, Algebra of Least Squares.
+
+The R packages used in the chapter are **HansenData**. Make sure these packages are installed an loaded prior to running the code in this chapter.
+
+```{r}
+#| include: false
+options(digits=3)
+```
+
+## Solving for Least Squares with One Regressor
+
+In Section 3.5, Hansen considers the simple regression model
+
+$$
+Y_i = X_i \beta + e_i,  i=1, \ldots n
+$$ 
+where $X_i \sim U(0,1)$ is the regressor, $\beta = 3$ is the coefficient, and $e_i \sim N(0,1)$ is the error term. Hansen simulates data from this model, with $n=20$, using
+
+```{r}
+n = 20
+set.seed(3)
+X = runif(n,0,1)
+e = rnorm(n)
+Y = X*3 + e
+```
+
+The simulated data is shown in @fig-Simple-Regression below:
+
+```{r}
+#| label: fig-Simple-Regression
+#| echo: true
+#| fig-cap: Simulated data from the simple regression model
+#| out-width: 80%
+#| fig-asp: 0.75
+#| fig-align: center
+plot(X, Y, xlab="X", ylab="Y", pch=16, col="cornflowerblue", cex=1.5)
+```
+
+The idea behind least squares estimation is to find the best fitting line to the observed scatterplot of data. With the simple regression model above the linear relationship between $Y$ and $X$ has and intercept of zero and slope $\beta$.   
+
+The least squares estimator $\hat{\beta}$ is the value of $\beta$ that minimizes the sum of squared errors (SSE):
+
+The simple least squares estimator that minimizes $\mathrm{SSE}(\beta)=\sum_{i=1}^n (Y_i - X_i \beta)^2$ is 
+$$
+\hat{\beta} = \frac{\sum_{i=1}^n X_i Y_i}{\sum_{i=1}^n X_i^2}.
+$$ 
+This can be computed in R using^[The solution $\hat{\beta}=3.07$ given by Hansen on page 64 is the least square estimator computed with X and an intercept.]
+
+```{r}
+beta_hat = sum(X*Y)/sum(X^2)
+beta_hat
+```
+
+The fitted regression line is shown in @fig-Simple-Regression-Fit below:
+
+```{r}
+#| label: fig-Simple-Regression-Fit
+#| echo: false
+#| fig-cap: Fitted regression line from the simple regression model
+#| out-width: 80%
+#| fig-asp: 0.75
+#| fig-align: center
+#| fig-legend: Fitted regression line
+#| fig-legend-pos: bottom
+plot(X, Y, xlab="X", ylab="Y", pch=16, cex=1.5, col="cornflowerblue")
+abline(a=0, b=beta_hat, lwd=2)
+```
+
+The function $\mathrm{SSE}(\beta)$ 
+
+## Illustration of Simple Regression Using Matrix Algebra
+
+The example Hansen Chapter 2 Section 7, uses the same CPS data set as in @sec-Conditional-Expectation-Projection:
+
+```{r}
+library(HansenData)
+cps09mar$experience = cps09mar$age - cps09mar$education - 6
+cps09mar$wage = cps09mar$earnings/(cps09mar$hours*cps09mar$week)
+cps09mar$lwage = log(cps09mar$wage)
+```
+
+* Do matrix algebra calculations first to illustrate matrix math in R
+* Talk about why you should never calculate the projection matrix
+* Then show how to use the R function `lm()` to estimate the simple regression model
+
+First, I replicate the illustration of the regression of log wages on years of education and a constant (intercept) or married (spouse present) black female wage earners with 12 years of potential work experience:
+
+$$
+lnwage_{i} = \beta \times educ_{i} + \alpha + e_{i} = \mathrm{X}_i'\boldsymbol{\beta} + e_i, ~ i=1, \ldots n
+$$
+where $X_i = (educ_i, 1)'$ is the $(2 \times 1)$ vector of regressors, $\boldsymbol{\beta} = (\beta, \alpha)'$ is the vector of coefficients, and $e_i$ is the error term.
+
+I construct the sample data using:
+```{r}
+exampleData = subset(cps09mar, subset = (race == 2 & female == 1 & marital == 1 & experience == 12))
+head(exampleData)
+```
+There are `r nrow(exampleData)` observations in the sample.
+
+In matrix notation, the regression model can be written as
+$$
+\underset{(n \times 1)}{\mathbf{Y}} = \underset{(n \times 2)}{\mathbf{X}}\underset{(2 \times 1)}{\boldsymbol{\beta}} + \underset{(n \times 1)}{\mathbf{e}}.
+$$
+The least squares estimator of $\boldsymbol{\beta}$ is
+$$
+\hat{\boldsymbol{\beta}} = (\mathbf{X}'\mathbf{X})^{-1}\mathbf{X}'\mathbf{Y}.
+$$
+
+Using the matrix algebra functions in R, the least squares estimator can be computed as follows:
+
+```{r}
+X = cbind(exampleData$education, 1)
+Y = exampleData$lwage
+beta_hat = solve(t(X) %*% X) %*% t(X) %*% Y
+rownames(beta_hat) = c("education", "intercept")
+colnames(beta_hat) = "estimate"
+beta_hat
+```
+In R, `t()` transposes a matrix, `solve()` computes the inverse of a matrix, and `%*%` is the matrix multiplication operator.
+
+For black females with 12 and 16 years of education, the predicted log wages are
+```{r}
+Y_hat_12 = beta_hat[1] * 12 + beta_hat[2]
+Y_hat_16 = beta_hat[1] * 16 + beta_hat[2]
+ans = c(Y_hat_12, Y_hat_16)
+ans
+```
+
+
+### Fitted Values and Residuals
+
+The $n \times 1$ vector of least squares fitted values are
+$$
+\hat{\mathbf{Y}} = \mathbf{X}\hat{\boldsymbol{\beta}} = \mathbf{X}(\mathbf{X}'\mathbf{X})^{-1}\mathbf{X}'\mathbf{Y}=\mathbf{P}\mathbf{Y},
+$$
+where $\mathbf{P} = \mathbf{X}(\mathbf{X}'\mathbf{X})^{-1}\mathbf{X}'$ is the $n \times n$ projection matrix. Recall, $\mathbf{P}$ is a symmetric and idempotent matrix satisfying $\mathbf{P}^2 = \mathbf{P}\mathbf{P} = \mathbf{P}$ and $\mathbf{P}' = \mathbf{P}$.
+
+The $n \times 1$ vector of least squares residuals are
+$$
+\hat{\mathbf{e}} = \mathbf{Y} - \hat{\mathbf{Y}} = \mathbf{Y} - \mathbf{P}\mathbf{Y} = (\mathbf{I} - \mathbf{P})\mathbf{Y} = \mathbf{M}\mathbf{Y},
+$$
+
+where $\mathbf{M} = \mathbf{I} - \mathbf{P}$ is the idempotent annihilator matrix orthogonal to $\mathbf{P}$ satisfying $\mathbf{M}^2 = \mathbf{M}\mathbf{M} = \mathbf{M}$, $\mathbf{M}' = \mathbf{M}$ and $\mathbf{M}\mathbf{P} = \mathbf{0}$.
+
+The fitted values and residuals can be computed in R as follows:
+
+```{r}
+Y_hat = X %*% beta_hat
+e_hat = Y - Y_hat
+ans = cbind(Y_hat, e_hat)
+colnames(ans) = c("fitted values", "residuals")
+head(ans)
+```
+Equivalently, the fitted values and residuals can be computed using the projection and annihilator matrices:
+
+```{r}
+P = X %*% solve(t(X) %*% X) %*% t(X)
+M = diag(nrow(X)) - P
+Y_hat = P %*% Y
+e_hat = M %*% Y
+ans = cbind(Y_hat, e_hat)
+colnames(ans) = c("fitted values", "residuals")
+head(ans)
+```
+You can verify numerically that $\mathbf{P}^2=\mathbf{P}$, $\mathbf{P}' = \mathbf{P}$, and $\mathbf{P}\mathbf{M} = \mathbf{0}$. 
+
+In R, it is easy to verify the six conditions of Theorem 3.3. For example, to verify $tr(\mathbf{P})=k$ use
+```{r}
+sum(diag(P))
+```
+To verify $\mathbf{P}$ has k eigenvalues equal to 1 and $n-k$ eigenvalues equal to 0, use
+```{r}
+round(eigen(P)$values)
+```
+
+For computing the fitted values and residuals it is not recommended to use the projection and annihilator matrices because they are $n \times n$ matrices and can be very large if $n$ is large. Instead, use the formulas $\hat{\mathbf{Y}} = \mathbf{X}\hat{\boldsymbol{\beta}}$ and $\hat{\mathbf{e}} = \mathbf{Y} - \hat{\mathbf{Y}}$.
+
+### Properties of Fitted Values and Residuals
+
+Residuals have mean zero:
+
+```{r}
+round(mean(e_hat))
+```
+Residuals are uncorrelated with regressors (education and constant) and fitted values:
+
+```{r}
+round(as.numeric(cor(e_hat, exampleData$education)))
+round(as.numeric(cor(e_hat, Y_hat)))
+```
+### Estimation of Error Variance
+
+The error variance, $\sigma^2 = \mathrm{Var}(e_i)$, can be estimated using the residuals in the following two ways:
+$$
+\tilde{\sigma}^2 = \frac{1}{n - k} \sum_{i=1}^n \hat{e}_i^2 \quad \text{and} \quad \hat{\sigma}^2 = \frac{1}{n - k} \sum_{i=1}^n \hat{e}_i^2
+$$
+The estimate $\tilde{\sigma}^2$ is the maximum likelihood estimator of $\sigma^2$ and $\hat{\sigma}^2$ is the unbiased (degree-of-freedom adjusted) estimator of $\sigma^2$. In R, these estimates can be computed as follows:
+
+```{r}
+n.obs = nrow(exampleData)
+sigma2_tilde = sum(e_hat^2)/(n.obs - 2)
+sigma2_hat = sum(e_hat^2)/n.obs
+c(sigma2_tilde, sigma2_hat)
+
+```
+### Analysis of Variance and Regression $R^2$
+
+Using the trivial identity
+$$
+\mathbf{Y} = \mathbf{\hat{Y}} + \mathbf{Y} - \mathbf{\hat{Y}} = \mathbf{\hat{Y}} + \mathbf{\hat{e}}
+$$
+and the fact that $\mathbf{\hat{Y}}$ and $\mathbf{\hat{e}}$ are orthogonal gives the sum of squares decomposition
+$$
+\mathbf{Y}'\mathbf{Y} = \mathbf{\hat{Y}}'\mathbf{\hat{Y}} + \mathbf{\hat{e}}'\mathbf{\hat{e}}.
+$$
+
+If a constant is in the regression, then the sum of squares decomposition can be expressed as
+$$
+(\mathrm{\mathbf{Y}} - \mathrm{1}\bar{Y})'(\mathrm{\mathbf{Y}} - \mathrm{1}\bar{Y}) = (\mathbf{\hat{Y}} - \mathrm{1}\bar{Y})'(\mathbf{\hat{Y}} - \mathrm{1}\bar{Y}) + \mathbf{\hat{e}}'\mathbf{\hat{e}},
+$$
+or
+$$
+\sum_{i=1}^n (Y_i - \bar{Y})^2 = \sum_{i=1}^n (\hat{Y}_i - \bar{Y})^2 + \sum_{i=1}^n \hat{e}_i^2
+$$
+Dividing both sides by $n$ gives rise to the variance decomposition:
+$$
+\widehat{\mathrm{var}}(\mathbf{Y}) = \widehat{\mathrm{var}}(\mathbf{\hat{Y}}) + \widehat{\mathrm{var}}(\mathbf{\hat{e}}).
+$$
+
+Further dividing both sides by $\widehat{\mathrm{var}}(\mathbf{Y})$ gives the $R^2$ decomposition:
+$$
+1 = \frac{\widehat{\mathrm{var}}(\mathbf{\hat{Y}})}{\widehat{\mathrm{var}}(\mathbf{Y})} + \frac{\widehat{\mathrm{var}}(\mathbf{\hat{e}})}{\widehat{\mathrm{var}}(\mathbf{Y})} = R^2 + (1 - R^2).
+$$
+Here $R^2 = \widehat{\mathrm{var}}(\mathbf{\hat{Y}})/\widehat{\mathrm{var}}(\mathbf{Y})$ is the proportion of the variance in $\mathbf{Y}$ explained by the regression, and $1 - R^2 = \widehat{\mathrm{var}}(\mathbf{\hat{e}})/\widehat{\mathrm{var}}(\mathbf{Y})$ is the proportion of the variance in $\mathbf{Y}$ not explained by the regression.
+
+## Illustration of Simple Regression Using `lm()`
+
+Use the R function `lm()` for least squares estimation
+
+```{r}
+lwage.fit = lm(lwage ~ education, data=exampleData)
+class(lwage.fit)
+names(lwage.fit)
+```
+
+The component `coefficients` contains the estimated coefficients $\hat{\beta}$, `fitted.values` contains the fitted values $\hat{\mathbf{Y}}$, and `residuals` contains the residuals $\hat{\mathbf{e}}$.
+
+* Disscuss the other components
+* Discuss the qr decomposition used in the `lm()` function to compute the least squares estimates. The `qr` component contains the QR decomposition of the regressor matrix $\mathbf{X}$, which is used to compute the least squares estimates efficiently and numerically stable.
+
+
+
+Individual components can be extracted using `$`
+
+```{r}
+lwage.fit$coefficients
+head(lwage.fit$fitted.values)
+head(lwage.fit$residuals)
+```
+
+Coefficients, fitted values, and residuals can also be extracted using the extractor functions `coef()`, `fitted()`, and `residuals()`:
+
+```{r}
+coef(lwage.fit)
+head(fitted(lwage.fit))
+head(residuals(lwage.fit))
+```
+
+R is object oriented and there are generic method functions `print()`, `summary()`, `plot()`, and `predict()`:
+
+The `print` method shows the basic output from the estimation:
+
+```{r}
+lwage.fit
+```
+
+The `summary` method shows standard errors, t-statistics and other aspects of the fit
+
+```{r}
+summary(lwage.fit)
+```
+
+I will discuss the `summary`, `plot` and `predict` methods later on after we cover the material in chapter 4.
+
+## Visualization of the Least Squares Fit
+
+The least squares fit from a simple regression can be visualized in a scatterplot:
+
+```{r}
+plot(exampleData$education, exampleData$lwage, xlab="Years of education", 
+     ylab="Log hourly wage", pch=16, col="cornflowerblue", cex=2)
+abline(lwage.fit, lwd=2)
+```
+
+
+## Estimation of error variance
+
+```{r}
+n.obs = nrow(exampleData)
+sig2hat = sum(residuals(lwage.fit)^2)/(n.obs - 2)
+sighat = sqrt(sig2hat)
+sig2hat
+sighat
+```
+
+## Influence Statistics
+
+The diagonal elements of the "hat" or projection matrix (the leverage points), can be computed using the R function `hatvalues()`:
+
+```{r}
+h = hatvalues(lwage.fit)
+h
+```
+
+Here there are two regressors so the sum of the leverage points is equal to 2
+
+```{r}
+sum(h)
+```
+
+The R function `influence()` computes the leverage points as well as the change in the estimated coefficients which results when the i-th case is dropped from the regression: $\hat{\beta} - \hat{\beta}_{(-i)}$
+
+```{r}
+leverage.vals = influence(lwage.fit)
+names(leverage.vals)
+# change in the estimated coefficients which results when the i-th case is dropped from the regression
+leverage.vals$coefficients
+```
+
+## Prediction errors
+
+The vector of prediction errors is easy to compute:
+
+```{r}
+n.obs = nrow(exampleData)
+Mstar = solve(diag(n.obs) - diag(h))
+predError = as.numeric(Mstar%*%residuals(lwage.fit))
+```
+
+The sample mean squared prediction error (aka *cross validation statistic*) is
+
+```{r}
+cvStat = as.numeric(crossprod(predError)/n.obs)
+cvStat
+```
+
+## Influence statistic
+
+The influence values (diference between OLS fitted values and leave-one-out predicted values) can be computed using
+
+```{r}
+influence.vals = h*predError
+influence.vals
+influence.stat = max(influence.vals)
+influence.stat
+```
+
+## Multiple Regression
+
+Here I replicate the illustration of multiple regression from Hansen section 3.7. The multiple regression is
+
+$$lnwage_{i} = \beta_{1} \times educ_{i} + \beta_{2} \times exper_{i} + \beta_{3} \times exper_{i}^{2}/100 +  \alpha + e_{i}$$
+
+for single (never married) asian male wage earners
+
+```{r}
+exampleData2 = subset(cps09mar, subset = (race == 4 & female == 0 & marital == 7))
+nrow(exampleData2)
+```
+
+Use the R function `lm()` for least squares estimation
+
+```{r}
+lwage.fit2 = lm(lwage ~ education + experience + I(experience^2 / 100), data=exampleData2)
+class(lwage.fit2)
+names(lwage.fit2)
+```
+
+```{r}
+lwage.fit2 
+```
